@@ -14,6 +14,7 @@
         --text: #f9f2ea;
         --muted: #d1c4b7;
         --border: rgba(255, 255, 255, 0.12);
+        --danger: #ff9a9a;
         --success: #86d19a;
         --shadow: 0 24px 60px rgba(0, 0, 0, 0.32);
       }
@@ -34,6 +35,13 @@
       a {
         color: inherit;
         text-decoration: none;
+      }
+
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
       }
 
       .page-shell {
@@ -221,7 +229,11 @@
         color: var(--text);
         border-radius: 16px;
         padding: 14px 16px;
-        font: inherit;
+      }
+
+      input::placeholder,
+      textarea::placeholder {
+        color: rgba(209, 196, 183, 0.72);
       }
 
       textarea {
@@ -229,7 +241,16 @@
         resize: vertical;
       }
 
-      .availability {
+      .help-list,
+      .form-errors,
+      .errorlist {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--danger);
+      }
+
+      .availability,
+      .success-banner {
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -237,11 +258,20 @@
         margin: 20px 0 24px;
         padding: 16px 18px;
         border-radius: 18px;
+      }
+
+      .availability {
         background: rgba(134, 209, 154, 0.08);
         border: 1px solid rgba(134, 209, 154, 0.22);
       }
 
-      .availability strong {
+      .success-banner {
+        background: rgba(134, 209, 154, 0.12);
+        border: 1px solid rgba(134, 209, 154, 0.28);
+      }
+
+      .availability strong,
+      .success-banner strong {
         color: var(--success);
       }
 
@@ -364,6 +394,7 @@
         }
 
         .availability,
+        .success-banner,
         .footer-bar {
           flex-direction: column;
           align-items: flex-start;
@@ -390,75 +421,116 @@
 
         <div class="hero-grid">
           <section class="hero-copy">
-            <div class="eyebrow">✨ Diseño de landing para reservas gourmet</div>
+            <div class="eyebrow">✨ Sistema de reservas listo para capturar solicitudes</div>
             <h1>Reserva una mesa para una experiencia memorable</h1>
             <p>
-              Un diseño elegante para restaurantes que quieren destacar su ambiente,
-              mostrar disponibilidad y convertir visitas en reservas con una interfaz
-              clara, premium y enfocada en móvil.
+              Ahora la landing ya guarda solicitudes reales de reserva en la base de datos
+              de Django, lista para evolucionar con confirmaciones, disponibilidad y panel interno.
             </p>
             <div class="hero-actions">
-              <button class="primary-button" type="button">Reservar ahora</button>
+              <a class="primary-button" href="#reservar">Reservar ahora</a>
               <button class="secondary-button" type="button">Ver menú degustación</button>
             </div>
             <div class="stats">
               <div class="stat">
-                <strong>4.9/5</strong>
-                <span>Valoración promedio</span>
+                <strong>{{ total_reservations }}</strong>
+                <span>Reservas registradas</span>
               </div>
               <div class="stat">
-                <strong>120+</strong>
-                <span>Reservas esta semana</span>
+                <strong>{% if latest_reservation %}{{ latest_reservation.party_size }}{% else %}0{% endif %}</strong>
+                <span>Último grupo reservado</span>
               </div>
               <div class="stat">
-                <strong>18:30</strong>
-                <span>Próxima hora disponible</span>
+                <strong>
+                  {% if latest_reservation %}
+                    {{ latest_reservation.reservation_time|time:"H:i" }}
+                  {% else %}
+                    18:30
+                  {% endif %}
+                </strong>
+                <span>Última hora registrada</span>
               </div>
             </div>
           </section>
 
           <aside class="booking-card" id="reservar">
             <h2>Solicita tu reserva</h2>
-            <p>Diseño estático de referencia para la futura integración con backend.</p>
-            <form>
+            <p>Completa el formulario y la solicitud quedará registrada en Django.</p>
+
+            {% if reservation_created %}
+              <div class="success-banner">
+                <div>
+                  <strong>Reserva enviada correctamente</strong>
+                  <div>Tu solicitud se guardó y ya aparece disponible para gestión en el panel.</div>
+                </div>
+              </div>
+            {% endif %}
+
+            {% if form.non_field_errors %}
+              <ul class="form-errors">
+                {% for error in form.non_field_errors %}
+                  <li>{{ error }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+
+            <form method="post">
+              {% csrf_token %}
               <div class="form-grid">
                 <div class="field">
-                  <label for="nombre">Nombre</label>
-                  <input id="nombre" type="text" placeholder="Ana García" />
+                  <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+                  {{ form.name }}
+                  {{ form.name.errors }}
                 </div>
                 <div class="field">
-                  <label for="personas">Comensales</label>
-                  <select id="personas">
-                    <option>2 personas</option>
-                    <option>4 personas</option>
-                    <option>6 personas</option>
-                    <option>8 personas</option>
-                  </select>
+                  <label for="{{ form.party_size.id_for_label }}">{{ form.party_size.label }}</label>
+                  {{ form.party_size }}
+                  {{ form.party_size.errors }}
                 </div>
                 <div class="field">
-                  <label for="fecha">Fecha</label>
-                  <input id="fecha" type="date" />
+                  <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+                  {{ form.email }}
+                  {{ form.email.errors }}
                 </div>
                 <div class="field">
-                  <label for="hora">Hora</label>
-                  <select id="hora">
-                    <option>18:30</option>
-                    <option>19:00</option>
-                    <option>20:30</option>
-                    <option>21:15</option>
-                  </select>
+                  <label for="{{ form.phone.id_for_label }}">{{ form.phone.label }}</label>
+                  {{ form.phone }}
+                  {{ form.phone.errors }}
+                </div>
+                <div class="field">
+                  <label for="{{ form.reservation_date.id_for_label }}">{{ form.reservation_date.label }}</label>
+                  {{ form.reservation_date }}
+                  {{ form.reservation_date.errors }}
+                </div>
+                <div class="field">
+                  <label for="{{ form.reservation_time.id_for_label }}">{{ form.reservation_time.label }}</label>
+                  {{ form.reservation_time }}
+                  {{ form.reservation_time.errors }}
                 </div>
                 <div class="field full">
-                  <label for="mensaje">Peticiones especiales</label>
-                  <textarea id="mensaje" placeholder="Alergias, celebración, terraza o silla para bebé"></textarea>
+                  <label for="{{ form.special_requests.id_for_label }}">{{ form.special_requests.label }}</label>
+                  {{ form.special_requests }}
+                  {{ form.special_requests.errors }}
                 </div>
               </div>
               <div class="availability">
                 <div>
-                  <strong>Disponibilidad confirmada</strong>
-                  <div>Última actualización hace 5 minutos</div>
+                  <strong>
+                    {% if latest_reservation %}
+                      Última reserva: {{ latest_reservation.reservation_date|date:"d/m/Y" }}
+                    {% else %}
+                      Listo para recibir reservas
+                    {% endif %}
+                  </strong>
+                  <div>
+                    {% if latest_reservation %}
+                      {{ latest_reservation.name }} · {{ latest_reservation.party_size }} personas
+                    {% else %}
+                      El primer envío quedará guardado automáticamente en la base de datos.
+                    {% endif %}
+                  </div>
                 </div>
-                <button class="primary-button" type="button">Continuar</button>
+                <button class="primary-button" type="submit">Guardar reserva</button>
               </div>
             </form>
           </aside>
@@ -470,46 +542,45 @@
       <div class="page-shell">
         <section class="section-grid" id="experiencia">
           <article class="section-card">
-            <h3>Una atmósfera pensada para ocasiones especiales</h3>
+            <h3>Backend listo para crecer con tu operación</h3>
             <p>
-              El diseño combina tonos cálidos, jerarquía tipográfica y bloques de
-              información claros para transmitir exclusividad desde el primer vistazo.
-              Es ideal para restaurantes de autor, rooftops, wine bars o espacios fine dining.
+              Ya puedes registrar reservas, revisarlas en el administrador de Django y usar
+              esta base para añadir confirmaciones, reglas de ocupación, mesas y recordatorios.
             </p>
             <div class="chips">
               <div class="chip">
-                <strong>Ambiente</strong>
-                Iluminación tenue, terraza privada y música en vivo los viernes.
+                <strong>Persistencia</strong>
+                Las solicitudes se guardan en SQLite mediante un modelo `Reservation`.
               </div>
               <div class="chip">
-                <strong>Ubicación</strong>
-                Centro histórico, acceso rápido y aparcamiento concertado.
+                <strong>Validación</strong>
+                El formulario usa `ModelForm` para validar correo, fecha, hora y tamaño del grupo.
               </div>
               <div class="chip">
-                <strong>Horario</strong>
-                Martes a domingo · 13:00–16:00 · 19:00–23:30.
+                <strong>Panel admin</strong>
+                El equipo puede revisar y filtrar reservas desde `/admin/`.
               </div>
               <div class="chip" id="menu">
-                <strong>Especialidad</strong>
-                Menú degustación de temporada con maridaje opcional.
+                <strong>Siguiente paso</strong>
+                Añadir disponibilidad real, confirmación por email y gestión de mesas.
               </div>
             </div>
           </article>
 
           <article class="section-card">
-            <h3>Momentos destacados</h3>
+            <h3>Lo que ya resuelve esta versión</h3>
             <p>
-              Usa esta columna para destacar beneficios de la experiencia y reforzar
-              la decisión de reserva antes de implementar la lógica real del formulario.
+              El flujo ya no es solo visual: el backend captura datos útiles de contacto y de la reserva,
+              dejando lista una base sólida para la lógica operativa del restaurante.
             </p>
             <div class="chips">
               <div class="chip">
-                <strong>Chef’s table</strong>
-                Visualiza un upgrade premium con plazas limitadas y atención personalizada.
+                <strong>Datos clave</strong>
+                Nombre, email, teléfono, fecha, hora, comensales y peticiones especiales.
               </div>
               <div class="chip">
-                <strong>Eventos privados</strong>
-                Diseñado para mostrar cenas corporativas, aniversarios y grupos cerrados.
+                <strong>Estado inicial</strong>
+                Cada solicitud se crea como pendiente para facilitar la confirmación posterior.
               </div>
             </div>
           </article>
@@ -517,24 +588,24 @@
 
         <section class="feature-grid">
           <article class="feature-card">
-            <span>🍽️</span>
-            <h3>Flujo de reserva claro</h3>
+            <span>🗂️</span>
+            <h3>Modelo de reservas</h3>
             <p>
-              El formulario prioriza fecha, hora y número de personas para reducir fricción.
+              La app ya dispone de una entidad persistente y preparada para evolucionar con más reglas de negocio.
             </p>
           </article>
           <article class="feature-card">
-            <span>🥂</span>
-            <h3>Diseño premium</h3>
+            <span>✅</span>
+            <h3>Validación de formulario</h3>
             <p>
-              Tarjetas translúcidas, gradientes cálidos y CTA visibles para elevar la percepción del local.
+              Los campos quedan validados en servidor para evitar registros incompletos o inconsistentes.
             </p>
           </article>
           <article class="feature-card">
-            <span>📱</span>
-            <h3>Responsive</h3>
+            <span>⚙️</span>
+            <h3>Gestión interna</h3>
             <p>
-              La composición se adapta a móvil y tablet para captar reservas desde cualquier dispositivo.
+              El admin de Django permite listar, filtrar y buscar reservas desde el primer día.
             </p>
           </article>
         </section>
@@ -542,16 +613,16 @@
         <section class="testimonial-grid" id="opiniones">
           <article class="testimonial-card">
             <span>★</span>
-            <h3>“Ideal para una cena de aniversario”</h3>
+            <h3>“Ahora sí hay flujo real de captación”</h3>
             <p>
-              La estructura permite destacar opiniones reales y reforzar confianza sin sobrecargar la página.
+              La home pasa de maqueta visual a punto de entrada funcional para solicitudes de reserva.
             </p>
           </article>
           <article class="testimonial-card">
             <span>♥</span>
-            <h3>“Reservar fue rapidísimo”</h3>
+            <h3>“Lista para iterar sobre lógica de negocio”</h3>
             <p>
-              Cuando se conecte al backend, este diseño ya tiene una base sólida para un funnel de conversión.
+              La base ya está preparada para incorporar confirmaciones, disponibilidad y automatizaciones.
             </p>
           </article>
         </section>
@@ -560,7 +631,7 @@
 
     <footer class="footer">
       <div class="page-shell footer-bar">
-        <div>Reserva Web · Diseño conceptual para página de reservas de restaurante</div>
+        <div>Reserva Web · Backend inicial para página de reservas de restaurante</div>
         <div>Tel. +34 600 123 456 · hola@reservaweb.com</div>
       </div>
     </footer>
